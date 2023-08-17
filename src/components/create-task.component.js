@@ -16,7 +16,7 @@ import "../App.css";
 const Label = props => (
   <tr>
     <td>{props.label}</td>
-    <td>{props.probability.toFixed(4)}</td>
+    <td>{props.probability == undefined ? null : props.probability.toFixed(4)}</td>
     <td>
       <a href="#" onClick={() => props.onManualDelete(props.label)}>X</a>       
     </td>
@@ -70,7 +70,7 @@ const RecommendedUserList = props => {
   // TODO display only top N & add search bar to filter by username
   const displayedUsers = React.Children.toArray(
     Object.entries(props.users)
-      .sort((a, b) => a[1].score < b[1].score)
+      .sort((a, b) => (a[1].score < b[1].score) ? 1 : ((a[1].score < b[1].score) ? -1 : 0))
       .map(([username, attr]) =>
 	<User
 	  username={username}
@@ -257,22 +257,22 @@ export default class CreateTask extends React.Component {
       text: this.state.description
     };
     axios.post('http://localhost:5000/nlptest/processTask', taskInfo)
-      .then(response => this.setState({
-	model_output: response.data.model_output,
-	top_labels: [
-	  ...response.data.top_labels
-	    .filter(label => !this.state.manual_deleted_labels.includes(label.label)),
-	  ...this.state.manual_added_labels.map(label => ({label: label, probability: null}))
-	],
-	labels_is_loading: false,
-	labels_is_outdated: false
-      }))
+      .then(response => {console.log(response.data.top_labels); this.setState({
+        model_output: response.data.model_output,
+        top_labels: [
+          ...response.data.top_labels
+            .filter(label => !this.state.manual_deleted_labels.includes(label.label)),
+          ...this.state.manual_added_labels.map(label => ({label: label, probability: null}))
+        ],
+        labels_is_loading: false,
+        labels_is_outdated: false
+      })})
       .catch(err => {
-	console.error(err);
-	this.setState({
-	  labels_is_loading: false
-	});
-	alert(`Error retrieving labels`);
+        console.error(err);
+        this.setState({
+          labels_is_loading: false
+        });
+        alert(`Error retrieving labels`);
       })
   }
 

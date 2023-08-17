@@ -31,60 +31,41 @@ def scan_all_arxiv_categories_recent():
 # scrape from all arxiv categories
 def scan_all_arxiv_computer_science_categories2020():
     url = "https://export.arxiv.org/"
-    # Headers so they know who we are
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 '
-                      'Safari/537.3'}
+
     session = requests.session()
-    html = session.get(url, headers=headers).text
+    html = scraper_methods.get_html(url, session)
     soup = BeautifulSoup(html, "lxml")
     parsed = 0
-    # print(html)
-    # print(soup.findAll('a', attrs={'href': re.compile("list/cs\.")}))
 
     for link in soup.findAll('a', attrs={'href': re.compile("list/cs\.")}):
         l = "https://export.arxiv.org/" + (link.get('href')).replace("recent", "20")
-        print("\n " + l + " Parsed " + str(parsed))
         scan_category(l, parsed, session)
 
 
 def scan_category(url, parsed, session=None):
-    print("hi")
 
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 '
-                      'Safari/537.3'}
-    if session is None:
-        req = Request(url=url, headers=headers)
-        page = urlopen(req)
-        html = page.read().decode("utf-8")
-    else:
-        html = session.get(url, headers=headers).text
-
+    html = scraper_methods.get_html(url, session)
     soup = BeautifulSoup(html, "lxml")
-    allfilespage = (str(soup.find("small"))).split(' ')[3]
+    all_file_pages = (str(soup.find("small"))).split(' ')[3]
 
-    print(allfilespage)
-    if (int(allfilespage)) > 2000:
-        allfilespage = "2000"
-    url += "?skip=0&show=" + allfilespage
+    if (int(all_file_pages)) > 2000:
+        all_file_pages = "2000"
+    url += "?skip=0&show=" + all_file_pages
 
-    if session is None:
-        req = Request(url=url, headers=headers)
-        page = urlopen(req)
-        html = page.read().decode("utf-8")
-    else:
-        html = session.get(url, headers=headers).text
+    html = scraper_methods.get_html(url, session)
     soup = BeautifulSoup(html, "lxml")
-    print(url)
     c2 = 0
     for link in soup.findAll('a', attrs={'href': re.compile("/abs/")}):
-        if parsed % 200 == 0:
-            time.sleep(60)
-        print(str(c2) + ', ', end='')
-        parse_paper("https://export.arxiv.org/" + link.get('href'), session)
-        c2 += 1
-        parsed += 1
+            if c2 > int(allfilespage):
+                break
+            time.sleep(0.3)
+            print(str(c2)+', ', end = '')
+            try:
+                parsePaper("https://export.arxiv.org/"+link.get('href'),session)
+            except urllib.error.HTTPError:
+                print("removed")
+            c2+=1
+            parsed+=1
 
 
 def parse_paper(url, session=None):
@@ -92,15 +73,7 @@ def parse_paper(url, session=None):
 
     # three sets of useful information here, tags from subjects, what we can get from the title, what we can get out
     # of the abstract
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 '
-                      'Safari/537.3'}
-    if session is None:
-        req = Request(url=url, headers=headers)
-        page = urlopen(req)
-        html = page.read().decode("utf-8")
-    else:
-        html = session.get(url, headers=headers).text
+    html = scraper_methods.get_html(url, session)
     soup = BeautifulSoup(html, "lxml")
 
     # fetch paper title
@@ -110,6 +83,7 @@ def parse_paper(url, session=None):
     # fetch the tags(subjects) for the paper
     subjects = str(soup.find('td', {'class': 'tablecell subjects'}).get_text())
     subjects = subjects.replace("\n", "")
+    subjects = subjects.replace(" ", "")
     subjects = (re.sub(r'\([^)]*\)', '', subjects)).split(';')
 
     # collect the abstract
